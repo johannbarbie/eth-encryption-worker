@@ -1,0 +1,125 @@
+<!doctype html>
+<html class="no-js" lang="">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title></title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="browser/util.bundle.js"></script>
+  </head>
+  <body>
+
+    <!-- Add your site or application content here -->
+    <p>Hello world! This is HTML5 Boilerplate.</p>
+    <!--################ how to use seed in wallet:
+
+        this._private = new Buffer('7ca6f5625ae980910a4d4f7c5179cfbcf99af618dca4947ab111ef63778acb0a', 'hex');
+        this._address = '0x' + ethUtil.privateToAddress(this._private).toString('hex')
+
+    -->
+    <script>
+// ################ SERIALIZE WALLET
+      var Buffer = Lib.buffer.Buffer;
+      var fastSha256 = Lib;
+
+      var entropy = '1234567890abcdefgh1234567890ab';
+      if (typeof(entropy) !== 'string' || entropy.length !== 30) {
+          throw new Error('entropy must be a string of length 30');
+      }
+      entropy = new Buffer(entropy);
+      var seed = new Buffer(fastSha256(entropy));
+      var hexSeed = seed.toString('hex');
+      console.log(hexSeed);
+      var password = 'test9900';
+
+      var path = 'http://worker.acebusters.com.s3-website-us-east-1.amazonaws.com/iframe.html?origin='+encodeURIComponent(location.origin);
+      pathArray = path.split( '/' );
+
+      window.addEventListener('message', function(evt) {
+        if (evt.origin !== pathArray[0] + '//' + pathArray[2]) {
+          //ignoring
+          return;
+        }
+        if (!evt.data || evt.data.action == 'error') {
+          console.log('error');
+          console.dir(evt.data.error);
+          return;
+        }
+        var data = evt.data;
+        if (data.action === 'loaded') {
+          console.log('worker loaded, starting export ...');
+          console.dir(crypto.getRandomValues(new Uint8Array(64)))
+          iframe.contentWindow.postMessage({
+            action: "export",
+            hexSeed: hexSeed,
+            password: password,
+            randomBytes: crypto.getRandomValues(new Uint8Array(64))
+          }, '*');
+        } else if (data.action === 'progress') {
+          console.log(parseInt(data.percent) + '%');
+        } else if (data.action === 'exported') {
+          console.log('exported');
+          console.log(JSON.stringify(data.json));
+        } else {
+          console.log('uknown event' + data.action);
+          console.dir(data)
+        }
+      }, false);
+
+      var iframe = document.createElement('iframe');
+      iframe.src = path;
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+
+// ################ DESERIALIZE WALLET
+
+      var json = '{"address":"0x0735a7a806ac6fffe26318f83102d50675c95dfa","Crypto":{"cipher":"aes-128-ctr","cipherparams":{"iv":"e944473d5ecd6ef459fed5d4b9eaa947"},"ciphertext":"e933b9e9a7428d6c3562d40d49e7712c37a66156296e45f37b704603671e1404","kdf":"scrypt","kdfparams":{"dklen":32,"n":256,"r":1,"p":8,"salt":"3539d3678a96330c8d91ed6a9cf9b7487a60a72e18751b68f4014973811580e9"},"mac":"75addd112ce529c976d25445a898c8067cb31d57be40de8d5081372196db09c9"},"version":3}';
+
+      var password = 'test9900';
+
+      var path = 'http://worker.acebusters.com.s3-website-us-east-1.amazonaws.com/iframe.html?origin='+encodeURIComponent(location.origin);
+      pathArray = path.split( '/' );
+
+
+      window.addEventListener('message', function(evt) {
+        if (evt.origin !== pathArray[0] + '//' + pathArray[2]) {
+          //ignoring
+          return;
+        }
+        if (!evt.data || evt.data.action == 'error') {
+          console.log('error');
+          console.dir(evt.data.error);
+          return;
+        }
+        var data = evt.data;
+        if (data.action === 'loaded') {
+          console.log('worker loaded, starting import ...');
+          iframe.contentWindow.postMessage({
+              action: 'import',
+              json: json,
+              password: password,
+          }, '*');
+        } else if (data.action === 'progress') {
+          console.log(parseInt(data.percent) + '%');
+        } else if (data.action === 'imported') {
+          if (data.hexSeed === null) {
+            console.log('Message Authentication Code mismatch (wrong password)')
+          } else {
+            console.log('Wallet successfully imported: '+ data.hexSeed);
+          }
+        }  else {
+          console.log('uknown event' + data.action);
+          console.dir(data)
+        }
+      }, false);
+
+      var iframe = document.createElement('iframe');
+      iframe.src = path;
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+    </script>
+  </body>
+</html>
+
+

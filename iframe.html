@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <script src="browser/util.bundle.js"></script>
+  </head>
+  <body>
+    <script>
+
+
+      function getParameterByName(name, url) {
+        if (!url) url = window.location.href;
+        name = name.replace(/[\[\]]/g, "\\$&");
+        var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)", "i"),
+          results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, " "));
+      }
+
+      var registered = false;
+      var worker = {};
+      worker['import'] = new Worker('wallet-import.js');
+      worker['export'] = new Worker('wallet-export.js');
+
+      window.addEventListener('message', function(evt) {
+        var data = evt.data;
+
+        if (!registered) {
+          worker[data.action].addEventListener('message', function (event) {
+            window.top.postMessage(JSON.parse(JSON.stringify(event.data)), evt.origin);
+          });
+          worker[data.action].addEventListener('error', function (event) {
+            window.top.postMessage(JSON.parse(JSON.stringify(event.data)), evt.origin);
+          });
+          registered = true;
+        }
+
+        worker[data.action].postMessage(data);
+      }, false);
+
+      if (window.Worker && window.crypto) {
+        window.top.postMessage({action: 'loaded'}, getParameterByName('origin'));
+      } else {
+        window.top.postMessage({action: 'error', message: 'browser requirements not satisfied.'}, getParameterByName('origin'));
+      }
+
+    </script>
+  </body>
+</html>
